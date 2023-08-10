@@ -13,7 +13,7 @@ const routes = [
     },
     {
         icon:Plus,
-        href:"/companion/new",
+        href:"/character/new",
         label:"Create",
         logined:true,
     },
