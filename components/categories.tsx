@@ -63,7 +63,7 @@ export default function Categories({ data }: CategoriesProps) {
                     return (
                         <button
                             onClick={() => handleOnClick(item.id)}
-                            id={item.id}
+                            key={item.id}
                             className={cn(`
                                 flex
                                 items-center
