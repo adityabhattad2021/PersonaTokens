@@ -1,8 +1,9 @@
 "use client";
 
 import * as z from "zod";
-import type { Category,Character } from "@prisma/client";
-import {zodResolver} from "@hookform/resolvers/zod";
+import axios from "axios";
+import type { Category, Character } from "@prisma/client";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
@@ -10,59 +11,82 @@ import ImageUpload from "@/components/image-upload";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {PREAMBLE,SEED_CHAT} from "@/constants/instructions"
+import { PREAMBLE, SEED_CHAT } from "@/constants/instructions"
 import { Button } from "@/components/ui/button";
 import { Wand2Icon } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { useRouter } from "next/navigation";
 
 interface CharacterFormProps {
     initialData: Character | null;
-    categories:Category[]
+    categories: Category[]
 }
 
 const formSchema = z.object({
-    name:z.string().min(1,{
-        message:"Name is required",
+    name: z.string().min(1, {
+        message: "Name is required",
     }),
-    description:z.string().min(1,{
-        message:"Description is required",
+    description: z.string().min(1, {
+        message: "Description is required",
     }),
-    categoryId:z.string().min(1,{
-        message:"Category is requireasdasdasdd"
+    categoryId: z.string().min(1, {
+        message: "Category is requireasdasdasdd"
     }),
-    instructions:z.string().min(200,{
-        message:"Instructions needs to be atleast 200 characters long"
+    instructions: z.string().min(200, {
+        message: "Instructions needs to be atleast 200 characters long"
     }),
-    seed:z.string().min(200,{
-        message:"Seed needs to be atleast 200 characters long",
+    seed: z.string().min(200, {
+        message: "Seed needs to be atleast 200 characters long",
     }),
-    src:z.string().min(1,{
-        message:"Image is required",
+    src: z.string().min(1, {
+        message: "Image is required",
     }),
-    
+
 })
 
 
 export default function CharacterForm({
     categories,
     initialData
-}:CharacterFormProps) {
+}: CharacterFormProps) {
+
+    const {toast} = useToast();
+    const router=useRouter();
 
     const form = useForm<z.infer<typeof formSchema>>({
-        resolver:zodResolver(formSchema),
-        defaultValues:initialData || {
-            name:"",
-            description:"",
-            instructions:"",
-            seed:"",
-            src:"",
-            categoryId:undefined,
+        resolver: zodResolver(formSchema),
+        defaultValues: initialData || {
+            name: "",
+            description: "",
+            instructions: "",
+            seed: "",
+            src: "",
+            categoryId: undefined,
         },
     });
 
     const isLoading = form.formState.isSubmitting;
 
-    async function handleOnSubmit(values:z.infer<typeof formSchema>){
-        console.log(values);
+    async function handleOnSubmit(values: z.infer<typeof formSchema>) {
+        try {
+            if (initialData) {
+                await axios.patch(`/api/character/${initialData.id}`, values);
+            } else {
+                await axios.post(`/api/character`, values);
+            }
+            toast({
+                variant:"default",
+                description:"Successfully minted your character."
+            })
+            router.refresh();
+            router.push("/")
+        } catch (error) {
+            toast({
+                variant:"destructive",
+                description:"Something went wrong, try again later."
+            })
+            console.log('SOMETHING WENT WRONG', error);
+        }
     }
 
     return (
@@ -78,11 +102,11 @@ export default function CharacterForm({
                                 General Information about your character
                             </p>
                         </div>
-                        <Separator className="bg-primary/10"/>
+                        <Separator className="bg-primary/10" />
                     </div>
                     <FormField
                         name="src"
-                        render={({field})=>{
+                        render={({ field }) => {
                             return (
                                 <FormItem className="flex flex-col items-center justify-center space-y-4">
                                     <FormControl>
@@ -92,7 +116,7 @@ export default function CharacterForm({
                                             disabled={isLoading}
                                         />
                                     </FormControl>
-                                    <FormMessage/>
+                                    <FormMessage />
                                 </FormItem>
                             )
                         }}
@@ -101,7 +125,7 @@ export default function CharacterForm({
                         <FormField
                             name="name"
                             control={form.control}
-                            render={({field})=>{
+                            render={({ field }) => {
                                 return (
                                     <FormItem className="col-span-2 md:col-span-1">
                                         <FormLabel>Name</FormLabel>
@@ -115,7 +139,7 @@ export default function CharacterForm({
                                         <FormDescription>
                                             This is what the created character will identify itself as.
                                         </FormDescription>
-                                        <FormMessage/>
+                                        <FormMessage />
                                     </FormItem>
                                 )
                             }}
@@ -123,7 +147,7 @@ export default function CharacterForm({
                         <FormField
                             name="description"
                             control={form.control}
-                            render={({field})=>{
+                            render={({ field }) => {
                                 return (
                                     <FormItem className="col-span-2 md:col-span-1">
                                         <FormLabel>Description</FormLabel>
@@ -137,7 +161,7 @@ export default function CharacterForm({
                                         <FormDescription>
                                             Short description for your AI character.
                                         </FormDescription>
-                                        <FormMessage/>
+                                        <FormMessage />
                                     </FormItem>
                                 )
                             }}
@@ -145,7 +169,7 @@ export default function CharacterForm({
                         <FormField
                             name="categoryId"
                             control={form.control}
-                            render={({field})=>{
+                            render={({ field }) => {
                                 return (
                                     <FormItem>
                                         <FormLabel>
@@ -167,7 +191,7 @@ export default function CharacterForm({
                                             </FormControl>
                                             <SelectContent>
                                                 {
-                                                    categories.map((category)=>{
+                                                    categories.map((category) => {
                                                         return (
                                                             <SelectItem
                                                                 key={category.id}
@@ -183,27 +207,27 @@ export default function CharacterForm({
                                         <FormDescription>
                                             Select a category for your AI character.
                                         </FormDescription>
-                                        <FormMessage/>
+                                        <FormMessage />
                                     </FormItem>
                                 )
                             }}
                         />
                     </div>
                     <div className="space-y-2 w-full">
-                            <div>
-                                <h3 className="text-lg font-medium">
-                                    Configuration
-                                </h3>
-                                <p className="text-sm text-muted-foreground">
-                                    Detailed instructions to determine how should the created character behave.
-                                </p>
-                            </div>
-                            <Separator className="bg-primary/10"/>
+                        <div>
+                            <h3 className="text-lg font-medium">
+                                Configuration
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                                Detailed instructions to determine how should the created character behave.
+                            </p>
+                        </div>
+                        <Separator className="bg-primary/10" />
                     </div>
                     <FormField
                         name="instructions"
                         control={form.control}
-                        render={({field})=>{
+                        render={({ field }) => {
                             return (
                                 <FormItem className="col-span-2 md:col-span-1">
                                     <FormLabel>Instructions</FormLabel>
@@ -219,7 +243,7 @@ export default function CharacterForm({
                                     <FormDescription>
                                         Give as detailed discription for your character as possible.
                                     </FormDescription>
-                                    <FormMessage/>
+                                    <FormMessage />
                                 </FormItem>
                             )
                         }}
@@ -227,7 +251,7 @@ export default function CharacterForm({
                     <FormField
                         name="seed"
                         control={form.control}
-                        render={({field})=>{
+                        render={({ field }) => {
                             return (
                                 <FormItem className="col-span-2 md:col-span-1">
                                     <FormLabel>Example Conversation</FormLabel>
@@ -243,7 +267,7 @@ export default function CharacterForm({
                                     <FormDescription>
                                         Some example conversation to set the tone for your character.
                                     </FormDescription>
-                                    <FormMessage/>
+                                    <FormMessage />
                                 </FormItem>
                             )
                         }}
@@ -251,9 +275,9 @@ export default function CharacterForm({
                     <div className="w-full flex justify-center">
                         <Button size={"lg"} disabled={isLoading}>
                             {initialData ? "Edit your character" : "Create your character"}
-                        <Wand2Icon
-                            className="w-4 h-4 ml-2"
-                        />
+                            <Wand2Icon
+                                className="w-4 h-4 ml-2"
+                            />
                         </Button>
                     </div>
                 </form>
