@@ -27,8 +27,6 @@ export async function PATCH(
         },
         data:{
             categoryId,
-            userId:"asasd",
-            userWalletAddress:"0x123",
             src,
             name,
             description,

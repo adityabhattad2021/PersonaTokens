@@ -5,7 +5,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    const { src, name, description, instructions, seed, categoryId } = body;
+    const { src, name, description, instructions, seed, categoryId, address } = body;
 
     if (
       !src ||
@@ -13,7 +13,8 @@ export async function POST(req: Request) {
       !description ||
       !instructions ||
       !seed ||
-      !categoryId
+      !categoryId ||
+      !address
     ) {
       return new NextResponse('Missing required fields', { status: 400 });
     }
@@ -21,8 +22,7 @@ export async function POST(req: Request) {
     const character = await prismadb.character.create({
         data:{
             categoryId,
-            userId:"asasd",
-            userWalletAddress:"0x123",
+            userWalletAddress:address,
             src,
             name,
             description,

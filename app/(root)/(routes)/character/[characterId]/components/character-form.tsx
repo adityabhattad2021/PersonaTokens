@@ -16,6 +16,10 @@ import { Button } from "@/components/ui/button";
 import { Wand2Icon } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
+import { useAccount, usePrepareContractWrite, useContractWrite } from "wagmi";
+import { personaTokenABI, personaTokenAddress } from "@/constants/smart-contracts";
+import { uuidToUint256 } from "@/lib/uuid-to-uint256";
+import { useEffect, useState } from "react";
 
 interface CharacterFormProps {
     initialData: Character | null;
@@ -44,14 +48,41 @@ const formSchema = z.object({
 
 })
 
+type smartContractArgsType = {
+    uuid: string | undefined,
+    uri: string | undefined,
+}
 
 export default function CharacterForm({
     categories,
     initialData
 }: CharacterFormProps) {
+    const [smartContractArgs, setSmartContractArgs] = useState<smartContractArgsType>()
+    const { config } = usePrepareContractWrite({
+        address: personaTokenAddress,
+        abi: personaTokenABI,
+        functionName: 'safeMint',
+        args: [uuidToUint256(smartContractArgs?.uuid), smartContractArgs?.uri],
+        enabled: smartContractArgs?.uri !== undefined && smartContractArgs.uuid !== undefined
+    })
+    const { write } = useContractWrite(config)
 
-    const {toast} = useToast();
-    const router=useRouter();
+    const { toast } = useToast();
+    const router = useRouter();
+    const { isConnected, address } = useAccount();
+
+
+    useEffect(() => {
+        if(write){
+            write?.();
+            toast({
+                variant: "default",
+                description: "Successfully minted your character."
+            })
+            router.refresh();
+            router.push("/")
+        }
+    }, [write])
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -68,22 +99,27 @@ export default function CharacterForm({
     const isLoading = form.formState.isSubmitting;
 
     async function handleOnSubmit(values: z.infer<typeof formSchema>) {
+
+        if (!isConnected) return;
+
         try {
             if (initialData) {
                 await axios.patch(`/api/character/${initialData.id}`, values);
             } else {
-                await axios.post(`/api/character`, values);
+                const response = await axios.post(`/api/character`, { ...values, address });
+                const characterMetadata = await axios.post('/api/metadata', { name: response.data.name, description: response.data.description, image: response.data.src });
+                const characterMetadataURI = `https://w3s.link/ipfs/${characterMetadata}/metadata.json`
+                const id = response.data.id;
+                setSmartContractArgs({
+                    uuid: id,
+                    uri: characterMetadataURI
+                })
             }
-            toast({
-                variant:"default",
-                description:"Successfully minted your character."
-            })
-            router.refresh();
-            router.push("/")
+
         } catch (error) {
             toast({
-                variant:"destructive",
-                description:"Something went wrong, try again later."
+                variant: "destructive",
+                description: "Something went wrong, try again later."
             })
             console.log('SOMETHING WENT WRONG', error);
         }

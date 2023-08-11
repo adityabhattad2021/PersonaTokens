@@ -22,7 +22,6 @@ model Category {
 model Character {
   id                String @id @default(uuid())
   // owner of the character NFT
-  userId            String
   userWalletAddress String
   src               String
   name              String @db.Text
