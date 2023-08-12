@@ -27,6 +27,7 @@ model Character {
   description       String
   instructions      String @db.Text
   seed              String @db.Text
+  listed            Boolean
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

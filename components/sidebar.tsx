@@ -1,26 +1,20 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Home, Plus, Settings } from "lucide-react";
+import { Plus, Settings,StoreIcon } from "lucide-react";
 import {usePathname, useRouter} from "next/navigation";
 
 const routes = [
     {
-        icon:Home,
-        href:"/",
-        label:"Home",
+        icon:StoreIcon,
+        href:"/marketplace",
+        label:"Marketplace",
         logined:false
     },
     {
         icon:Plus,
         href:"/character/new",
         label:"Create",
-        logined:true,
-    },
-    {
-        icon:Settings,
-        href:"/settings",
-        label:"Settings",
         logined:true,
     },
 ]

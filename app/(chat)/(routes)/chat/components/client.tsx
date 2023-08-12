@@ -1,5 +1,4 @@
 "use client"
-
 import ChatHeader from "@/components/chat-header";
 import type { Character, Message } from "@prisma/client"
 import { useRouter } from "next/navigation";

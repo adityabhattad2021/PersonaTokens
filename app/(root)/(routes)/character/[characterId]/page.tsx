@@ -1,5 +1,5 @@
 import prismadb from "@/lib/prismadb";
-import CharacterForm from "./components/character-form";
+import CharacterForm from "@/components/character-form";
 
 interface CharacterIdPageProps {
     params:{

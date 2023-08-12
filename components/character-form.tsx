@@ -56,6 +56,7 @@ export default function CharacterForm({
     categories,
     initialData
 }: CharacterFormProps) {
+
     const { address, isConnected } = useAccount();
     const { connect } = useConnect({
         connector: new InjectedConnector({

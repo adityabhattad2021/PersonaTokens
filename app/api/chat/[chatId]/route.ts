@@ -86,7 +86,6 @@ export async function POST(
 
         model.verbose=true;
 
-
         const resp = String(
             await model.call(
                 `

@@ -1,48 +1,26 @@
+"use client";
 import Categories from "@/components/categories";
 import SearchInput from "@/components/search-input";
 import prismadb from "@/lib/prismadb";
-import Characters from "./character/[characterId]/components/characters";
+import Characters from "../../../components/characters";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 
-interface RootPageProps {
-  searchParams: {
-    categoryId: string;
-    name: string;
-  }
-}
 
-export default async function RootPage({ searchParams }: RootPageProps) {
 
-  const data = await prismadb.character.findMany({
-    where: {
-      categoryId: searchParams.categoryId,
-      name: {
-        search: searchParams.name
-      }
-    },
-    orderBy: {
-      createdAt: "desc"
-    },
-    include: {
-      _count: {
-        select: {
-          messages: true,
-        }
-      }
-    }
-  })
+export default  function RootPage() {
 
-  const categoires = await prismadb.category.findMany();
+  const router=useRouter();
 
   return (
-    <div className="h-full p-4 space-y-2">
-      <SearchInput />
-      <Categories
-        data={categoires}
-      />
-      <Characters
-        data={data}
-      />
+    <div className="h-full p-4 space-y-2 flex justify-center items-center">
+      <Button 
+        onClick={()=>router.push("/marketplace")}
+        size={"lg"}
+      >
+        Navigate to Marketplace
+      </Button>
     </div>
   )
 }

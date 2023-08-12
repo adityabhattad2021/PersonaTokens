@@ -19,6 +19,12 @@ export default function Characters({ data }: CharacterProps) {
 
     const { address } = useAccount();
 
+    function maskAddress(address: string, lengthToShow: number):string {
+        const maskedStart = address.slice(0, lengthToShow);
+        const maskedEnd = address.slice(-lengthToShow);
+        return `${maskedStart}...${maskedEnd}`;
+    }
+
     if (data.length === 0) {
         return (
             <div className="pt-10 flex flex-col items-center jsutify-center space-y-3">
@@ -65,7 +71,7 @@ export default function Characters({ data }: CharacterProps) {
                                 </CardHeader>
                                 <CardFooter className="flex items-center justify-between text-xs text-muted-foreground">
                                     <p className="lowercase">
-                                        @0xabc
+                                        {maskAddress(item.userWalletAddress,5)}
                                     </p>
                                     <div className="flex items-center">
                                         <MessageSquare
