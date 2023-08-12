@@ -20,8 +20,6 @@ import { useAccount, useConnect } from "wagmi";
 import { writeContract, waitForTransaction } from "@wagmi/core";
 import { InjectedConnector } from "wagmi/connectors/injected";
 import { personaTokenABI, personaTokenAddress } from "@/constants/smart-contracts";
-import { uuidToUint256 } from "@/lib/uuid-to-uint256";
-import { useEffect, useState } from "react";
 import { baseGoerli } from "wagmi/chains";
 import { fromHex } from 'viem'
 
@@ -113,7 +111,7 @@ export default function CharacterForm({
                     description: "Successfully minted the character!"
                 })
                 router.refresh();
-                router.push("/")
+                router.push("/");
             }
 
         } catch (error) {

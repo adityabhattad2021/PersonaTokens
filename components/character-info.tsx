@@ -2,7 +2,7 @@
 
 import { MessageSquare } from "lucide-react";
 import Image from "next/image";
-import { useAccount } from "wagmi";
+import { useAccount, useConnect } from "wagmi";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { Category } from "@prisma/client";
@@ -12,10 +12,18 @@ import { cn } from "@/lib/utils";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
 import { Input } from "./ui/input";
 import * as z from "zod";
+import axios from "axios";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useTheme } from "next-themes";
+import { InjectedConnector } from "wagmi/connectors/injected";
+import { baseGoerli } from "wagmi/chains";
+import { writeContract, waitForTransaction } from "@wagmi/core";
+import { parseEther } from 'viem'
+import { NFTMarketplaceABI, NFTMarketplaceAddress, personaTokenABI, personaTokenAddress } from "@/constants/smart-contracts";
+import { useToast } from "@/components/ui/use-toast";
+
 
 interface CharacterInfoProps {
     character: {
@@ -45,8 +53,15 @@ const formSchema = z.object({
 
 export default function CharacterInfo({ character }: CharacterInfoProps) {
 
+    const { address, isConnected } = useAccount();
+    const { connect } = useConnect({
+        connector: new InjectedConnector({
+            chains: [baseGoerli],
+        }),
+    });
+
+    const { toast } = useToast();
     const router = useRouter();
-    const { address } = useAccount();
 
     const [isMounted, setIsMounted] = useState(false);
     const [open, setOpen] = useState(false);
@@ -65,8 +80,65 @@ export default function CharacterInfo({ character }: CharacterInfoProps) {
 
 
     async function handleSellNFT(values: z.infer<typeof formSchema>) {
-        alert(values.priceInETH);
-        setOpen(false);
+        try {
+            if (!isConnected) {
+                connect();
+            }
+            if (values.priceInETH > 0) {
+                // const { hash:approveHash } = await writeContract({
+                //     address: personaTokenAddress,
+                //     abi: personaTokenABI,
+                //     functionName: "approve",
+                //     args: [
+                //         NFTMarketplaceAddress,
+                //         character.tokenId,
+                //     ],
+                //     chainId: baseGoerli.id,
+                // });
+                // console.log("Hash of the transaction (watching)", approveHash);
+                // const approveData = await waitForTransaction({
+                //     hash:approveHash,
+                // });
+                // console.log("Transaction mined (Approve NFT)", approveData);
+                
+                // toast({
+                //     variant: "default",
+                //     description: "Successfully approved NFT for sale!"
+                // })
+
+                // const { hash:listHash } = await writeContract({
+                //     address: NFTMarketplaceAddress,
+                //     abi: NFTMarketplaceABI,
+                //     functionName: "listItem",
+                //     args: [
+                //         personaTokenAddress,
+                //         character.tokenId,
+                //         parseEther(values.priceInETH.toString()),
+                //     ],
+                //     chainId: baseGoerli.id,
+                // });
+                // console.log("Hash of the transaction (watching)", listHash);
+                // const listData = await waitForTransaction({
+                //     hash:listHash,
+                // });
+                // console.log("Transaction mined (List NFT)", listData);
+                await axios.patch("/api/marketplace/list",{
+                    characterId: character.id,
+                });
+                toast({
+                    variant: "default",
+                    description: "Successfully listed NFT for sale!"
+                })
+                router.refresh();
+                router.push("/");
+            }
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                description: "Something went wrong, try again later."
+            })
+            console.log(error);
+        }
     }
 
     function handleBuyNFT() {
@@ -103,7 +175,7 @@ export default function CharacterInfo({ character }: CharacterInfoProps) {
                 {address === character.userWalletAddress ? (
                     <div className="w-full flex justify-around md:justify-normal gap-10">
                         <AlertDialog open={open} onOpenChange={setOpen} >
-                            <AlertDialogTrigger className={cn("w-40 bg-white text-black rounded-lg md:w-44 text-lg tracking-wide transition",theme==="light" && "bg-black text-white")}>
+                            <AlertDialogTrigger className={cn("w-40 bg-white text-black rounded-lg md:w-44 text-lg tracking-wide transition", theme === "light" && "bg-black text-white")}>
                                 List
                             </AlertDialogTrigger>
                             <AlertDialogContent>
@@ -112,27 +184,27 @@ export default function CharacterInfo({ character }: CharacterInfoProps) {
                                         <AlertDialogHeader>
                                             <AlertDialogTitle>Sell {character.name}?</AlertDialogTitle>
                                             {/* <AlertDialogDescription> */}
-                                                <FormField
-                                                    name="priceInETH"
-                                                    render={({ field }) => {
-                                                        return (
-                                                            <FormItem>
-                                                                <FormLabel>Set price</FormLabel>
-                                                                <FormControl>
-                                                                    <Input
-                                                                        className="rounded-lg bg-primary/10"
-                                                                        placeholder="1.00"
-                                                                        {...field}
-                                                                    />
-                                                                </FormControl>
-                                                                <FormDescription>
-                                                                    Enter price in ETH.
-                                                                </FormDescription>
-                                                                <FormMessage />
-                                                            </FormItem>
-                                                        )
-                                                    }}
-                                                />
+                                            <FormField
+                                                name="priceInETH"
+                                                render={({ field }) => {
+                                                    return (
+                                                        <FormItem>
+                                                            <FormLabel>Set price</FormLabel>
+                                                            <FormControl>
+                                                                <Input
+                                                                    className="rounded-lg bg-primary/10"
+                                                                    placeholder="1.00"
+                                                                    {...field}
+                                                                />
+                                                            </FormControl>
+                                                            <FormDescription>
+                                                                Enter price in ETH.
+                                                            </FormDescription>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )
+                                                }}
+                                            />
                                             {/* </AlertDialogDescription> */}
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>

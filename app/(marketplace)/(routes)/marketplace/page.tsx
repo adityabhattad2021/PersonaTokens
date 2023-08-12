@@ -19,7 +19,8 @@ export default async function MarketplacePage({ searchParams }: MarketplacePageP
       categoryId: searchParams.categoryId,
       name: {
         search: searchParams.name
-      }
+      },
+      listed:true
     },
     orderBy: {
       createdAt: "desc"
