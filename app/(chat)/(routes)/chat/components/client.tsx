@@ -8,6 +8,7 @@ import { useCompletion } from "ai/react";
 import ChatForm from "@/components/chat-form";
 import ChatMessages from "@/components/chat-messages";
 import { ChatMessageProps } from "@/components/chat-message";
+import { useAccount } from "wagmi";
 
 
 interface ChatClientProps {
@@ -21,6 +22,7 @@ interface ChatClientProps {
 
 export default function ChatClient({ character }: ChatClientProps) {
 
+    const {address}=useAccount();
     const router = useRouter();
     const [messages, setMessages] = useState<ChatMessageProps[]>(character.messages);
 
@@ -42,6 +44,9 @@ export default function ChatClient({ character }: ChatClientProps) {
 
             router.refresh();
         },
+        body:{
+            userWalletAddress:address
+        }
     });
 
     function onSubmit(e: FormEvent<HTMLFormElement>) {

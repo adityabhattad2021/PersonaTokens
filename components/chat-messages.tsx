@@ -45,7 +45,7 @@ export default function ChatMessages({ messages = [], isLoading, character }: Ch
                             key={message.content}
                             role={message.role}
                             content={message.content}
-                            src={message.src}
+                            src={character.src}
                         />
                     )
                 })
