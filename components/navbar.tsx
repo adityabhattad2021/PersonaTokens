@@ -10,7 +10,7 @@ import MobileSidebar from "@/components/mobile-sidebar";
 import { useWeb3Modal } from '@web3modal/react'
 import { useAccount, useDisconnect } from "wagmi";
 import { useEffect, useState } from "react";
-import { Plus, Settings, StoreIcon } from "lucide-react";
+import { Plus, Settings, StoreIcon, User2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 const font = Poppins({
@@ -31,15 +31,21 @@ const routes = [
         label: "Create",
         logined: true,
     },
+    {
+        icon: User2,
+        href: "/profile",
+        label: "Profile",
+        logined: true,
+    },
 ]
 
 
 export default function Navbar() {
 
-    const { isConnected } = useAccount();
+    const { address, isConnected } = useAccount();
     const { disconnect } = useDisconnect()
     const { open } = useWeb3Modal()
-    const router=useRouter();
+    const router = useRouter();
 
     const [isMounted, setIsMounted] = useState(false);
 
@@ -63,17 +69,17 @@ export default function Navbar() {
             </div>
 
             <div className="flex items-center gap-x-3">
-                <div className="hidden md:flex gap-7 pr-20">
+                {isConnected && <div className="hidden md:flex gap-7 pr-20">
                     {routes.map((route) => {
                         return (
-                            <Button variant="ghost" onClick={()=>router.push(route.href)} key={route.href}>
+                            <Button variant="ghost" onClick={() => route.label === "Profile" ? router.push(`${route.href}/${address}`) : router.push(route.href)} key={route.href}>
                                 <h1 className={cn("font-bold text-lg cursor-pointer", font.className)} >
                                     {route.label}
                                 </h1>
                             </Button>
                         )
                     })}
-                </div>
+                </div>}
                 <Button size="sm" onClick={() => isConnected ? disconnect() : open()}>
                     {isConnected ? 'Disconnect' : 'Connect'}
                     <Wallet

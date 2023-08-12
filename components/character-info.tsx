@@ -19,8 +19,8 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { useTheme } from "next-themes";
 import { InjectedConnector } from "wagmi/connectors/injected";
 import { baseGoerli } from "wagmi/chains";
-import { writeContract, waitForTransaction } from "@wagmi/core";
-import { parseEther } from 'viem'
+import { writeContract, waitForTransaction, readContract } from "@wagmi/core";
+import { parseEther, formatEther } from 'viem'
 import { NFTMarketplaceABI, NFTMarketplaceAddress, personaTokenABI, personaTokenAddress } from "@/constants/smart-contracts";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -85,44 +85,44 @@ export default function CharacterInfo({ character }: CharacterInfoProps) {
                 connect();
             }
             if (values.priceInETH > 0) {
-                // const { hash:approveHash } = await writeContract({
-                //     address: personaTokenAddress,
-                //     abi: personaTokenABI,
-                //     functionName: "approve",
-                //     args: [
-                //         NFTMarketplaceAddress,
-                //         character.tokenId,
-                //     ],
-                //     chainId: baseGoerli.id,
-                // });
-                // console.log("Hash of the transaction (watching)", approveHash);
-                // const approveData = await waitForTransaction({
-                //     hash:approveHash,
-                // });
-                // console.log("Transaction mined (Approve NFT)", approveData);
-                
-                // toast({
-                //     variant: "default",
-                //     description: "Successfully approved NFT for sale!"
-                // })
+                const { hash: approveHash } = await writeContract({
+                    address: personaTokenAddress,
+                    abi: personaTokenABI,
+                    functionName: "approve",
+                    args: [
+                        NFTMarketplaceAddress,
+                        character.tokenId,
+                    ],
+                    chainId: baseGoerli.id,
+                });
+                console.log("Hash of the transaction (watching)", approveHash);
+                const approveData = await waitForTransaction({
+                    hash: approveHash,
+                });
+                console.log("Transaction mined (Approve NFT)", approveData);
 
-                // const { hash:listHash } = await writeContract({
-                //     address: NFTMarketplaceAddress,
-                //     abi: NFTMarketplaceABI,
-                //     functionName: "listItem",
-                //     args: [
-                //         personaTokenAddress,
-                //         character.tokenId,
-                //         parseEther(values.priceInETH.toString()),
-                //     ],
-                //     chainId: baseGoerli.id,
-                // });
-                // console.log("Hash of the transaction (watching)", listHash);
-                // const listData = await waitForTransaction({
-                //     hash:listHash,
-                // });
-                // console.log("Transaction mined (List NFT)", listData);
-                await axios.patch("/api/marketplace/list",{
+                toast({
+                    variant: "default",
+                    description: "Successfully approved NFT for sale!"
+                })
+
+                const { hash: listHash } = await writeContract({
+                    address: NFTMarketplaceAddress,
+                    abi: NFTMarketplaceABI,
+                    functionName: "listItem",
+                    args: [
+                        personaTokenAddress,
+                        character.tokenId,
+                        parseEther(values.priceInETH.toString()),
+                    ],
+                    chainId: baseGoerli.id,
+                });
+                console.log("Hash of the transaction (watching)", listHash);
+                const listData = await waitForTransaction({
+                    hash: listHash,
+                });
+                console.log("Transaction mined (List NFT)", listData);
+                await axios.patch("/api/marketplace/list", {
                     characterId: character.id,
                 });
                 toast({
@@ -141,8 +141,85 @@ export default function CharacterInfo({ character }: CharacterInfoProps) {
         }
     }
 
-    function handleBuyNFT() {
+    async function handleBuyNFT() {
+        try {
+            const data = await readContract({
+                address: NFTMarketplaceAddress,
+                abi: NFTMarketplaceABI,
+                functionName: "getTokenListedPrice",
+                args: [
+                    personaTokenAddress,
+                    character.tokenId,
+                ]
+            })
 
+            const { hash: buyNftHash } = await writeContract({
+                address: NFTMarketplaceAddress,
+                abi: NFTMarketplaceABI,
+                functionName: "buyItem",
+                args: [
+                    personaTokenAddress,
+                    character.tokenId,
+                ],
+                chainId: baseGoerli.id,
+                value: data as bigint,
+            });
+
+            console.log("Hash of the transaction (watching)", buyNftHash);
+            const buyData = await waitForTransaction({
+                hash: buyNftHash,
+            });
+            console.log("Transaction mined (Buy NFT)", buyData);
+            await axios.patch("/api/marketplace/buy", {
+                characterId: character.id,
+                userWalletAddress: address,
+            });
+            toast({
+                variant: "default",
+                description: `${character.name} has been purchased for ${formatEther(data as bigint)} ETH!`
+            })
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                description: "Something went wrong, try again later."
+            })
+            console.log(error);
+        }
+    }
+
+    async function handleUnlistNFT(){
+        try {
+            const { hash: unlistHash } = await writeContract({
+                address: NFTMarketplaceAddress,
+                abi: NFTMarketplaceABI,
+                functionName: "cancelListing",
+                args: [
+                    personaTokenAddress,
+                    character.tokenId,
+                ],
+                chainId: baseGoerli.id,
+            });
+            console.log("Hash of the transaction (watching)", unlistHash);
+            const unlistData = await waitForTransaction({
+                hash: unlistHash,
+            });
+            console.log("Transaction mined (Unlist NFT)", unlistData);
+            await axios.patch("/api/marketplace/unlist", {
+                characterId: character.id,
+            });
+            toast({
+                variant: "default",
+                description: "Successfully unlisted NFT!"
+            })
+            router.refresh();
+            router.push("/marketplace");
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                description: "Something went wrong, try again later."
+            })
+            console.log(error);
+        }
     }
 
     if (!isMounted) return null;
@@ -176,44 +253,61 @@ export default function CharacterInfo({ character }: CharacterInfoProps) {
                     <div className="w-full flex justify-around md:justify-normal gap-10">
                         <AlertDialog open={open} onOpenChange={setOpen} >
                             <AlertDialogTrigger className={cn("w-40 bg-white text-black rounded-lg md:w-44 text-lg tracking-wide transition", theme === "light" && "bg-black text-white")}>
-                                List
+                                {character.listed ? 'Unlist' : 'List'}
                             </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <Form {...form}>
-                                    <form onSubmit={form.handleSubmit(handleSellNFT)}>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Sell {character.name}?</AlertDialogTitle>
-                                            {/* <AlertDialogDescription> */}
-                                            <FormField
-                                                name="priceInETH"
-                                                render={({ field }) => {
-                                                    return (
-                                                        <FormItem>
-                                                            <FormLabel>Set price</FormLabel>
-                                                            <FormControl>
-                                                                <Input
-                                                                    className="rounded-lg bg-primary/10"
-                                                                    placeholder="1.00"
-                                                                    {...field}
-                                                                />
-                                                            </FormControl>
-                                                            <FormDescription>
-                                                                Enter price in ETH.
-                                                            </FormDescription>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )
-                                                }}
-                                            />
-                                            {/* </AlertDialogDescription> */}
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel >Cancel</AlertDialogCancel>
-                                            <AlertDialogAction type="submit">Continue</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </form>
-                                </Form>
-                            </AlertDialogContent>
+                            {!character.listed ? (
+                                <AlertDialogContent>
+                                    <Form {...form}>
+                                        <form onSubmit={form.handleSubmit(handleSellNFT)}>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Sell {character.name}?</AlertDialogTitle>
+                                                {/* <AlertDialogDescription> */}
+                                                <FormField
+                                                    name="priceInETH"
+                                                    render={({ field }) => {
+                                                        return (
+                                                            <FormItem>
+                                                                <FormLabel>Set price</FormLabel>
+                                                                <FormControl>
+                                                                    <Input
+                                                                        className="rounded-lg bg-primary/10"
+                                                                        placeholder="1.00"
+                                                                        {...field}
+                                                                    />
+                                                                </FormControl>
+                                                                <FormDescription>
+                                                                    Enter price in ETH.
+                                                                </FormDescription>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )
+                                                    }}
+                                                />
+                                                {/* </AlertDialogDescription> */}
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel >Cancel</AlertDialogCancel>
+                                                <AlertDialogAction type="submit">Continue</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </form>
+                                    </Form>
+                                </AlertDialogContent>
+
+                            ) : (
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Sell {character.name}?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Your Character will no longer be listed for sale.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleUnlistNFT}>Continue</AlertDialogAction>
+                                    </AlertDialogFooter>
+
+                                </AlertDialogContent>
+                            )}
                         </AlertDialog>
                         <Button className="w-40 md:w-44 text-lg tracking-wide" size={"lg"} onClick={() => router.push(`/chat/?chatId=${character.id}&userWalletAddress=${address}`)}>
                             Chat
@@ -225,7 +319,7 @@ export default function CharacterInfo({ character }: CharacterInfoProps) {
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <div className={cn("w-full", !character.listed && "cursor-not-allowed")}>
-                                        <Button className="w-full text-lg tracking-wide" size={"lg"} disabled={!character.listed} onClick={() => handleBuyNFT}>
+                                        <Button className="w-full text-lg tracking-wide" size={"lg"} disabled={!character.listed} onClick={handleBuyNFT}>
                                             Buy
                                         </Button>
                                     </div>
