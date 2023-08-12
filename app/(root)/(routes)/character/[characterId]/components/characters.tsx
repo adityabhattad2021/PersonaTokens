@@ -1,8 +1,10 @@
+"use client";
 import { Card, CardFooter, CardHeader } from "@/components/ui/card"
 import type { Character } from "@prisma/client"
 import { MessageSquare } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { useAccount } from "wagmi"
 
 
 interface CharacterProps {
@@ -15,7 +17,9 @@ interface CharacterProps {
 
 export default function Characters({ data }: CharacterProps) {
 
-    if(data.length===0){
+    const { address } = useAccount();
+
+    if (data.length === 0) {
         return (
             <div className="pt-10 flex flex-col items-center jsutify-center space-y-3">
                 <div className="relative w-60 h-60">
@@ -36,13 +40,13 @@ export default function Characters({ data }: CharacterProps) {
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 pb-10">
             {
-                data.map((item)=>{
+                data.map((item) => {
                     return (
                         <Card
                             key={item.id}
                             className="bg-primary/10 rounded-xl cursor-pointer hover:opacity-75 transition border-0"
                         >
-                            <Link href={`/chat/${item.id}`}>
+                            <Link href={`/chat/?chatId=${item.id}&userWalletAddress=${address}`}>
                                 <CardHeader className="flex items-center justify-center text-center text-muted-foreground">
                                     <div className="relative w-32 h-32">
                                         <Image

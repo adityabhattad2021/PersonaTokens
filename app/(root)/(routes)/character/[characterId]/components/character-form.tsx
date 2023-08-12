@@ -80,8 +80,6 @@ export default function CharacterForm({
     const isLoading = form.formState.isSubmitting;
 
     async function handleOnSubmit(values: z.infer<typeof formSchema>) {
-
-
         try {
             if (!isConnected) {
                 connect();

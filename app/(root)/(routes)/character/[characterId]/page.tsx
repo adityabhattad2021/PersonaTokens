@@ -13,6 +13,8 @@ export default async function CharacterIdPage({
     params
 }:CharacterIdPageProps){
 
+
+    // TODO: Check if the user own this character before allowing him to edit character in the database.
     const character = await prismadb.character.findUnique({
         where:{
             id:params.characterId,
