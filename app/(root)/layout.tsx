@@ -7,11 +7,14 @@ export default function RootLayout({
     children: React.ReactNode
 }) {
     return (
-        <div className="h-full">
+        <main className="h-full">
             <Navbar/>
-            <main className="pt-16 h-full">
+            {/* <div className="hidden md:flex mt-14 w-24 flex-col fixed inset-y-0">
+                <Sidebar/>
+            </div> */}
+            <div className="md:pl-20 pt-16 h-full">
                 {children}
-            </main>
-        </div>
+            </div>
+        </main>
     )
 }
