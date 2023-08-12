@@ -35,6 +35,8 @@ model Character {
   category          Category @relation(fields: [categoryId],references: [id])
   categoryId        String
 
+  tokenId           Int
+
   messages          Message[]
 
   @@index([categoryId])

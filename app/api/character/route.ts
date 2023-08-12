@@ -5,7 +5,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    const { src, name, description, instructions, seed, categoryId, address } = body;
+    const { src, name, description, instructions, seed, categoryId, address,tokenId} = body;
 
     if (
       !src ||
@@ -27,7 +27,8 @@ export async function POST(req: Request) {
             name,
             description,
             instructions,
-            seed
+            seed,
+            tokenId
         }
 
     })

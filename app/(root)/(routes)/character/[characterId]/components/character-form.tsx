@@ -16,10 +16,14 @@ import { Button } from "@/components/ui/button";
 import { Wand2Icon } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
-import { useAccount, usePrepareContractWrite, useContractWrite } from "wagmi";
+import { useAccount, useConnect } from "wagmi";
+import { writeContract, waitForTransaction } from "@wagmi/core";
+import { InjectedConnector } from "wagmi/connectors/injected";
 import { personaTokenABI, personaTokenAddress } from "@/constants/smart-contracts";
 import { uuidToUint256 } from "@/lib/uuid-to-uint256";
 import { useEffect, useState } from "react";
+import { baseGoerli } from "wagmi/chains";
+import { fromHex } from 'viem'
 
 interface CharacterFormProps {
     initialData: Character | null;
@@ -48,42 +52,19 @@ const formSchema = z.object({
 
 })
 
-type smartContractArgsType = {
-    uuid: string | undefined,
-    uri: string | undefined,
-}
-
 export default function CharacterForm({
     categories,
     initialData
 }: CharacterFormProps) {
-    const [smartContractArgs, setSmartContractArgs] = useState<smartContractArgsType>()
-    const { config } = usePrepareContractWrite({
-        address: personaTokenAddress,
-        abi: personaTokenABI,
-        functionName: 'safeMint',
-        args: [uuidToUint256(smartContractArgs?.uuid), smartContractArgs?.uri],
-        enabled: smartContractArgs?.uri !== undefined && smartContractArgs.uuid !== undefined
-    })
-    const { write } = useContractWrite(config)
+    const { address, isConnected } = useAccount();
+    const { connect } = useConnect({
+        connector: new InjectedConnector({
+            chains: [baseGoerli],
+        }),
+    });
 
     const { toast } = useToast();
     const router = useRouter();
-    const { isConnected, address } = useAccount();
-
-
-    useEffect(() => {
-        if(write){
-            write?.();
-            toast({
-                variant: "default",
-                description: "Successfully minted your character."
-            })
-            router.refresh();
-            router.push("/")
-        }
-    }, [write])
-
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: initialData || {
@@ -100,20 +81,40 @@ export default function CharacterForm({
 
     async function handleOnSubmit(values: z.infer<typeof formSchema>) {
 
-        if (!isConnected) return;
 
         try {
+            if (!isConnected) {
+                connect();
+            }
             if (initialData) {
                 await axios.patch(`/api/character/${initialData.id}`, values);
             } else {
-                const response = await axios.post(`/api/character`, { ...values, address });
-                const characterMetadata = await axios.post('/api/metadata', { name: response.data.name, description: response.data.description, image: response.data.src });
-                const characterMetadataURI = `https://w3s.link/ipfs/${characterMetadata}/metadata.json`
-                const id = response.data.id;
-                setSmartContractArgs({
-                    uuid: id,
-                    uri: characterMetadataURI
+                const characterMetadata = await axios.post('/api/metadata', { name: values.name, description: values.description, image: values.src });
+
+                const characterMetadataURI = `ipfs://${characterMetadata.data}/metadata.json`
+
+                const { hash } = await writeContract({
+                    address: personaTokenAddress,
+                    abi: personaTokenABI,
+                    functionName: "safeMint",
+                    args: [
+                        characterMetadataURI
+                    ],
+                    chainId: baseGoerli.id,
+                });
+
+                console.log("Hash of the transaction (watching)", hash);
+                const data = await waitForTransaction({
+                    hash,
+                });
+
+                await axios.post('/api/character', { ...values, address, tokenId: fromHex(data.logs[0].topics[3] as `0x${string}`, "number") });
+                toast({
+                    variant: "default",
+                    description: "Successfully minted the character!"
                 })
+                router.refresh();
+                router.push("/")
             }
 
         } catch (error) {

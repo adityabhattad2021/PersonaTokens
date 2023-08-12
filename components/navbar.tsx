@@ -20,7 +20,7 @@ export default function Navbar() {
 
     const { isConnected} = useAccount();
     const {disconnect}=useDisconnect()
-    const { open, } = useWeb3Modal()
+    const { open } = useWeb3Modal()
 
     const [isMounted,setIsMounted]=useState(false);
 

@@ -8,21 +8,26 @@ export async function storeNFT(
   description: string,
   imageUrl: string
 ) {
-  // fetch the image from the URL and convert it to a Blob
+  try {
+    // Fetch the image from the URL and convert it to a Blob
+    const response = await fetch(imageUrl);
+    const blob = await response.arrayBuffer();
 
-  const response = await fetch(imageUrl);
-  const blob = await response.blob();
+    // Create a File object from the Blob
+    const image = new File([blob], name, {
+      type: response.headers.get('content-type') as string,
+    });
 
-  // create a File object from the Blob
-  const image = new File([blob], name, { type: blob.type });
+    // Create a new NFTStorage client using our API key
+    const nftstorage = new NFTStorage({ token: NFT_STORAGE_KEY as string });
 
-  // create a new NFTStorage client using our API key
-  const nftstorage = new NFTStorage({ token: NFT_STORAGE_KEY as string });
-
-  // call client.store, passing in the image & metadata
-  return nftstorage.store({
-    image,
-    name,
-    description,
-  });
+    return nftstorage.store({
+      image,
+      name,
+      description,
+    });
+  } catch (error) {
+    console.error('Error storing NFT:', error);
+    throw error;
+  }
 }
