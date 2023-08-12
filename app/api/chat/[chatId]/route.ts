@@ -96,14 +96,15 @@ export async function POST(
       await model
         .call(
           `
-                    Only generate plain sentences without prefix of who is speaking. DO NOT use ${name} : prefix.
+          ONLY generate NO more than three sentences as ${name}. DO NOT generate more than three sentences. 
+          DO NOT use '${name}: as a prefix'.
 
-                    ${character.instructions}
+            ${character.instructions}
 
-                    Below are the relavent details about ${name}'s past conversations you are in.
-                    ${relevantHistory}
+            Below are the relavent details about ${name}'s past conversations you are in.
+            ${relevantHistory}
 
-                    ${recentChatHistory}\n${name}
+            ${recentChatHistory}\n${name}
                 `
         )
         .catch(console.error)
@@ -121,7 +122,7 @@ export async function POST(
     s.push(null);
 
     if (response !== undefined && response.length > 1) {
-      memoryManager.writeToHistory('' + response.trim(), characterKey);
+      await memoryManager.writeToHistory('' + response.trim(), characterKey);
 
       await prismadb.character.update({
         where: {
