@@ -63,10 +63,10 @@ export default function Navbar() {
             </div>
 
             <div className="flex items-center gap-x-3">
-                <div className="flex gap-7 pr-20">
+                <div className="hidden md:flex gap-7 pr-20">
                     {routes.map((route) => {
                         return (
-                            <Button variant="ghost" onClick={()=>router.push(route.href)}>
+                            <Button variant="ghost" onClick={()=>router.push(route.href)} key={route.href}>
                                 <h1 className={cn("font-bold text-lg cursor-pointer", font.className)} >
                                     {route.label}
                                 </h1>
