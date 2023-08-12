@@ -16,7 +16,7 @@ export async function PATCH(
                 id:characterId,
             },
             data:{
-                listed:true,
+                listed:false,
             }
         })
         return NextResponse.json(character);

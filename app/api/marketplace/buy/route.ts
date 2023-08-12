@@ -7,8 +7,8 @@ export async function PATCH(
     try{
         const body = await req.json();
 
-        const { characterId } = body;       
-    
+        const { characterId,userWalletAddress } = body;
+        
         // TODO:Check if the user is the owner of the NFT.
 
         const character = await prismadb.character.update({
@@ -16,7 +16,8 @@ export async function PATCH(
                 id:characterId,
             },
             data:{
-                listed:true,
+                listed:false,
+                userWalletAddress:userWalletAddress,
             }
         })
         return NextResponse.json(character);

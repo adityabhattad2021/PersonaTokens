@@ -1,94 +1,101 @@
-import { StreamingTextResponse,LangChainStream } from "ai";
-import{CallbackManager} from "langchain/callbacks";
-import {Replicate} from "langchain/llms/replicate";
-import { NextResponse } from "next/server";
+import { StreamingTextResponse, LangChainStream } from 'ai';
+import { CallbackManager } from 'langchain/callbacks';
+import { Replicate } from 'langchain/llms/replicate';
+import { NextResponse } from 'next/server';
 
-import { CharacterKey, MemoryManager } from "@/lib/memory";
-import { rateLimit } from "@/lib/rate-limit";
-import prismadb from "@/lib/prismadb";
-
+import { CharacterKey, MemoryManager } from '@/lib/memory';
+import { rateLimit } from '@/lib/rate-limit';
+import prismadb from '@/lib/prismadb';
 
 export async function POST(
-    request:Request,
-    {params}:{params:{chatId:string}}
+  request: Request,
+  { params }: { params: { chatId: string } }
 ) {
-    try{
-        const {prompt,userWalletAddress}=await request.json();
+  try {
+    const { prompt, userWalletAddress } = await request.json();
 
-        const identifier = request.url+"-"+userWalletAddress;
-        const {success}=await rateLimit(identifier);
+    const identifier = request.url + '-' + userWalletAddress;
+    const { success } = await rateLimit(identifier);
 
-        if(!success){
-            return new NextResponse("Rate limit exceeded",{status:429})
-        }
+    if (!success) {
+      return new NextResponse('Rate limit exceeded', { status: 429 });
+    }
 
-        const character = await prismadb.character.update({
-            where:{
-                id:params.chatId,
-            },
-            data:{
-                messages:{
-                    create:{
-                        content:prompt,
-                        role:"user",
-                        userWalletAddress:userWalletAddress
-                    }
-                }
-            }
-        })
+    const character = await prismadb.character.update({
+      where: {
+        id: params.chatId,
+      },
+      data: {
+        messages: {
+          create: {
+            content: prompt,
+            role: 'user',
+            userWalletAddress: userWalletAddress,
+          },
+        },
+      },
+    });
 
-        if(!character){
-            return new NextResponse("Character not found",{status:404})
-        }
+    if (!character) {
+      return new NextResponse('Character not found', { status: 404 });
+    }
 
-        const name = character.id;
-        const character_file_name = name+".txt"
+    if (character.userWalletAddress !== userWalletAddress) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
 
-        const characterKey:CharacterKey = {
-            characterName:name,
-            userWalletAddress:userWalletAddress,
-            modelName:"llama2-13b"
-        }
+    const name = character.id;
+    const character_file_name = name + '.txt';
 
-        const memoryManager = await MemoryManager.getInstance();
+    const characterKey: CharacterKey = {
+      characterName: name,
+      userWalletAddress: userWalletAddress,
+      modelName: 'llama2-13b',
+    };
 
-        const records = await memoryManager.readLatestHistory(characterKey);
+    const memoryManager = await MemoryManager.getInstance();
 
-        if(records.length===0){
-            await memoryManager.seedChatHistory(character.seed,"\n\n",characterKey);
-        }
+    const records = await memoryManager.readLatestHistory(characterKey);
 
-        await memoryManager.writeToHistory("User: "+prompt+"\n",characterKey);
+    if (records.length === 0) {
+      await memoryManager.seedChatHistory(character.seed, '\n\n', characterKey);
+    }
 
-        const recentChatHistory  = await memoryManager.readLatestHistory(characterKey);
+    await memoryManager.writeToHistory('User: ' + prompt + '\n', characterKey);
 
-        const similarDocs = await memoryManager.vectorSearch(
-            recentChatHistory,
-            character_file_name
-        )
+    const recentChatHistory = await memoryManager.readLatestHistory(
+      characterKey
+    );
 
-        let relevantHistory = "";
+    const similarDocs = await memoryManager.vectorSearch(
+      recentChatHistory,
+      character_file_name
+    );
 
-        if(!!similarDocs && similarDocs.length!==0){
-            relevantHistory=similarDocs.map((doc)=>doc.pageContent).join("\n");
-        }
+    let relevantHistory = '';
 
-        const {handlers}=LangChainStream()
+    if (!!similarDocs && similarDocs.length !== 0) {
+      relevantHistory = similarDocs.map((doc) => doc.pageContent).join('\n');
+    }
 
-        const model = new Replicate({
-            model:"a16z-infra/llama-2-13b-chat:2a7f981751ec7fdf87b5b91ad4db53683a98082e9ff7bfd12c8cd5ea85980a52",
-            input:{
-                max_length:2048,
-            },
-            apiKey:process.env.REPLICATE_API_TOKEN,
-            callbackManager:CallbackManager.fromHandlers(handlers)
-        })
+    const { handlers } = LangChainStream();
 
-        model.verbose=true;
+    const model = new Replicate({
+      model:
+        'a16z-infra/llama-2-13b-chat:2a7f981751ec7fdf87b5b91ad4db53683a98082e9ff7bfd12c8cd5ea85980a52',
+      input: {
+        max_length: 2048,
+      },
+      apiKey: process.env.REPLICATE_API_TOKEN,
+      callbackManager: CallbackManager.fromHandlers(handlers),
+    });
 
-        const resp = String(
-            await model.call(
-                `
+    model.verbose = true;
+
+    const resp = String(
+      await model
+        .call(
+          `
                     Only generate plain sentences without prefix of who is speaking. DO NOT use ${name} : prefix.
 
                     ${character.instructions}
@@ -98,42 +105,43 @@ export async function POST(
 
                     ${recentChatHistory}\n${name}
                 `
-            ).catch(console.error)
         )
+        .catch(console.error)
+    );
 
-        const cleaned = resp.replaceAll(",","");
-        const chunks = cleaned.split("\n");
-        const response = chunks[0];
+    const cleaned = resp.replaceAll(',', '');
+    const chunks = cleaned.split('\n');
+    const response = chunks[0];
 
-        await memoryManager.writeToHistory(""+response.trim(),characterKey);
-        var Readable = require("stream").Readable;
+    await memoryManager.writeToHistory('' + response.trim(), characterKey);
+    var Readable = require('stream').Readable;
 
-        let s = new Readable();
-        s.push(response);
-        s.push(null);
+    let s = new Readable();
+    s.push(response);
+    s.push(null);
 
-        if(response!==undefined && response.length > 1){
-            memoryManager.writeToHistory(""+response.trim(),characterKey);
+    if (response !== undefined && response.length > 1) {
+      memoryManager.writeToHistory('' + response.trim(), characterKey);
 
-            await prismadb.character.update({
-                where:{
-                    id:params.chatId
-                },
-                data:{
-                    messages:{
-                        create:{
-                            content:response.trim(),
-                            role:"system",
-                            userWalletAddress:userWalletAddress
-                        }
-                    }
-                }
-            })
-        }
-
-        return new StreamingTextResponse(s);
-    }catch(error){
-        console.log("[CHAT_POST]",error);
-        return new NextResponse("Internal Server Error",{status:500})
+      await prismadb.character.update({
+        where: {
+          id: params.chatId,
+        },
+        data: {
+          messages: {
+            create: {
+              content: response.trim(),
+              role: 'system',
+              userWalletAddress: userWalletAddress,
+            },
+          },
+        },
+      });
     }
+
+    return new StreamingTextResponse(s);
+  } catch (error) {
+    console.log('[CHAT_POST]', error);
+    return new NextResponse('Internal Server Error', { status: 500 });
+  }
 }

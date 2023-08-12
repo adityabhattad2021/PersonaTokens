@@ -40,7 +40,7 @@ export default function ChatMessage({
 
     return (
         <div className={cn(
-            "group flex items-start gap-x-3 py-4 w-full items-center",
+            "group flex items-center gap-x-3 py-4 w-full ",
             role === "user" && "justify-end"
         )}>
             {role !== "user" && src && <BotAvatar
