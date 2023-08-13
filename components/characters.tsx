@@ -1,5 +1,6 @@
 "use client";
 import { Card, CardFooter, CardHeader } from "@/components/ui/card"
+import { maskAddress } from "@/lib/mask-address";
 import type { Character } from "@prisma/client"
 import { MessageSquare } from "lucide-react"
 import Image from "next/image"
@@ -16,14 +17,6 @@ interface CharacterProps {
 }
 
 export default function Characters({ data }: CharacterProps) {
-
-    const { address } = useAccount();
-
-    function maskAddress(address: string, lengthToShow: number):string {
-        const maskedStart = address.slice(0, lengthToShow);
-        const maskedEnd = address.slice(-lengthToShow);
-        return `${maskedStart}...${maskedEnd}`;
-    }
 
     if (data.length === 0) {
         return (

@@ -10,9 +10,9 @@ export default function LandingHero() {
     const { theme } = useTheme();
 
     return (
-        <div className={cn("text-white font-bold py-36 text-center space-y-5", theme === "light" && "text-slate-900")}>
+        <div className={cn("text-white font-bold py-32 text-center space-y-5", theme === "light" && "text-slate-900")}>
             <div className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl space-y-5 font-extrabold">
-                <h1>Platform to create and trade</h1>
+                <h1>Marketplace where you can create and trade</h1>
                 <div className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
                     <TypeWriterComponent
                         options={{

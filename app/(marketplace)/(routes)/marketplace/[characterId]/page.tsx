@@ -1,8 +1,5 @@
 import CharacterInfo from "@/components/character-info";
-import { Button } from "@/components/ui/button";
 import prismadb from "@/lib/prismadb";
-import { MessageSquare } from "lucide-react";
-import Image from "next/image";
 import { redirect } from "next/navigation";
 
 interface CharacterInfoPageProps {

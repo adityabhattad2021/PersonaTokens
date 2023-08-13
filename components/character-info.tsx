@@ -23,6 +23,7 @@ import { writeContract, waitForTransaction, readContract } from "@wagmi/core";
 import { parseEther, formatEther } from 'viem'
 import { NFTMarketplaceABI, NFTMarketplaceAddress, personaTokenABI, personaTokenAddress } from "@/constants/smart-contracts";
 import { useToast } from "@/components/ui/use-toast";
+import { maskAddress } from "@/lib/mask-address";
 
 
 interface CharacterInfoProps {
@@ -187,7 +188,7 @@ export default function CharacterInfo({ character }: CharacterInfoProps) {
         }
     }
 
-    async function handleUnlistNFT(){
+    async function handleUnlistNFT() {
         try {
             const { hash: unlistHash } = await writeContract({
                 address: NFTMarketplaceAddress,
@@ -226,7 +227,7 @@ export default function CharacterInfo({ character }: CharacterInfoProps) {
 
     return (
         <div className="mt-6 flex flex-col md:flex-row gap-6 md:gap-12">
-            <div className="relative w-96 h-96">
+            <div className="relative w-80 h-80 md:w-96 md:h-96">
                 <Image
                     className="rounded-xl"
                     fill
@@ -234,15 +235,27 @@ export default function CharacterInfo({ character }: CharacterInfoProps) {
                     alt="Character Image"
                 />
             </div>
-            <div className="w-96 mt-2 md:mt-16 flex flex-col gap-10">
+            <div className="w-80 h-80 md:w-96 md:h-96 mt-2 md:mt-16 flex flex-col gap-10">
                 <div className="flex flex-col gap-4 ml-4 md:ml-0">
-                    <h1 className="text-4xl font-medium">
+                    <h1 className="text-2xl md:text-4xl font-medium">
                         {character.name} #{character.tokenId}
                     </h1>
-                    <p className="text-lg text-muted-foreground">
+                    <p className="text-sm md:text-lg text-muted-foreground">
                         {character.description}
                     </p>
-                    <div className="flex  justify-start items-center text-md text-muted-foreground">
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <div className="text-xs md:text-sm text-accent-foreground cursor-pointer">
+                                    <span className="font-bold">Owned by:</span> {maskAddress(character.userWalletAddress,7)}
+                                </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                {character.userWalletAddress}
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                    <div className="flex justify-start items-center text-md text-muted-foreground">
                         <MessageSquare
                             className="w-3 h-3 mr-1"
                         />
@@ -250,7 +263,7 @@ export default function CharacterInfo({ character }: CharacterInfoProps) {
                     </div>
                 </div>
                 {address === character.userWalletAddress ? (
-                    <div className="w-full flex justify-around md:justify-normal gap-10">
+                    <div className="w-full flex justify-around md:justify-normal gap-6 md:gap-10">
                         <AlertDialog open={open} onOpenChange={setOpen} >
                             <AlertDialogTrigger className={cn("w-40 bg-white text-black rounded-lg md:w-44 text-lg tracking-wide transition", theme === "light" && "bg-black text-white")}>
                                 {character.listed ? 'Unlist' : 'List'}
@@ -314,12 +327,12 @@ export default function CharacterInfo({ character }: CharacterInfoProps) {
                         </Button>
                     </div>
                 ) : (
-                    <div className="w-full flex justify-around md:justify-normal gap-10">
+                    <div className="w-full flex justify-around md:justify-normal p-4">
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <div className={cn("w-full", !character.listed && "cursor-not-allowed")}>
-                                        <Button className="w-full text-lg tracking-wide" size={"lg"} disabled={!character.listed} onClick={handleBuyNFT}>
+                                    <div className={cn("flex w-full justify-center", !character.listed && "cursor-not-allowed")}>
+                                        <Button className="text-lg w-60 md:w-80 tracking-wide" size={"lg"} disabled={!character.listed} onClick={handleBuyNFT}>
                                             Buy
                                         </Button>
                                     </div>

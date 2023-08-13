@@ -69,7 +69,7 @@ export default function Navbar() {
             </div>
 
             <div className="flex items-center gap-x-3">
-                {isConnected && <div className="hidden md:flex gap-7 pr-20">
+                {isConnected && <div className="hidden md:flex gap-6 pr-20">
                     {routes.map((route) => {
                         return (
                             <Button variant="ghost" onClick={() => route.label === "Profile" ? router.push(`${route.href}/${address}`) : router.push(route.href)} key={route.href}>
