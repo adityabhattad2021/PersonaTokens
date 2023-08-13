@@ -111,7 +111,7 @@ export default function CharacterForm({
                     description: "Successfully minted the character!"
                 })
                 router.refresh();
-                router.push("/");
+                router.push(`/profile/${address}`);
             }
 
         } catch (error) {

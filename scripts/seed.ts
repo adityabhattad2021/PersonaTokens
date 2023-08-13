@@ -9,6 +9,7 @@ async function main() {
         { name: 'Famous People' },
         { name: 'Game Characters' },
         { name: 'Animals' },
+        { name: 'Fictional Character' },
         { name: 'Philosophy' },
         { name: 'Friendship' },
         { name: 'Coaching' },

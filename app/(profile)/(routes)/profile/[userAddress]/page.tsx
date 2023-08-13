@@ -1,12 +1,14 @@
-import Categories from "@/components/categories";
-import SearchInput from "@/components/search-input";
 import prismadb from "@/lib/prismadb";
 import Characters from "@/components/characters";
 import { Separator } from "@/components/ui/separator";
-
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { maskAddress } from "@/lib/mask-address";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import UserInfo from "@/components/user-info";
 
 interface ProfilePageProps {
-    params:{
+    params: {
         userAddress: string;
     }
 }
@@ -31,18 +33,13 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
     return (
         <div className="h-full p-4 space-y-2">
-            <div className="my-4 w-full flex flex-col gap-2 justify-start pl-6">
-                <h3 className="text-xl md:text-2xl font-medium transition">
-                    Your owned characters
-                </h3>
-                <p className="text-md md:text-xl text-muted-foreground transition">
-                    You can view and manage your characters here.
-                </p>
-            </div>
-            <Separator className="bg-primary/10 mb-4" />
-            <Characters
-                data={data}
+            <UserInfo
+                userWalletAddresss={params.userAddress}
+                userOwnedNFTs={data.length}
             />
+            <Separator className="bg-primary/10 mb-4" />
+            <div className="h-4"></div>
+            <Characters data={data} />
         </div>
     )
 }
