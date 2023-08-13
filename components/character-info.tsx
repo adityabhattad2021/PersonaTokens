@@ -179,6 +179,7 @@ export default function CharacterInfo({ character }: CharacterInfoProps) {
                 variant: "default",
                 description: `${character.name} has been purchased for ${formatEther(data as bigint)} ETH!`
             })
+            router.refresh();
         } catch (error) {
             toast({
                 variant: "destructive",
