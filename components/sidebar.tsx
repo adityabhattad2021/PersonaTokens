@@ -42,7 +42,7 @@ export default function Sidebar() {
 
     function onNavigate(route: Route) {
         if (route.label === "Profile") {
-            router.push(`${route.href}/${address}`)
+            return router.push(`${route.href}/${address}`)
         }
         return router.push(route.href);
     }

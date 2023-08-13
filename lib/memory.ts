@@ -34,10 +34,12 @@ export class MemoryManager {
     recentChatHistory: string,
     characterFileName: string
   ) {
+
+
     const pineconeClient = <PineconeClient>this.vectorDBClient;
 
     const pineconeIndex = pineconeClient.Index(
-      process.env.PINECONE_INDEX! || ''
+      process.env.PINECONE_INDEX! 
     );
 
     const vectorStore = await PineconeStore.fromExistingIndex(
@@ -50,6 +52,7 @@ export class MemoryManager {
       .catch((error) => {
         console.log('Failed to get vector search result', error);
       });
+      
 
     return similarDocs;
   }
@@ -63,6 +66,8 @@ export class MemoryManager {
   }
 
   private generateRedisCharacterKey(characterKey: CharacterKey): string {
+
+    
     return `${characterKey.characterName}-${characterKey.modelName}-${characterKey.userWalletAddress}`;
   }
 
@@ -100,7 +105,6 @@ export class MemoryManager {
 
     result = result.slice(-30).reverse();
     const recentChats = result.reverse().join('\n');
-
     return recentChats;
   }
 

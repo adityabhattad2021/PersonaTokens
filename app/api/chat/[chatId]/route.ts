@@ -1,10 +1,13 @@
+import { OpenAI } from 'langchain/llms/openai';
+import { LLMChain } from 'langchain/chains';
 import { StreamingTextResponse, LangChainStream } from 'ai';
-import { CallbackManager } from 'langchain/callbacks';
-import { Replicate } from 'langchain/llms/replicate';
+import { BaseCallbackHandler, CallbackManager } from 'langchain/callbacks';
+import { PromptTemplate } from 'langchain/prompts';
 import { NextResponse } from 'next/server';
 
 import { CharacterKey, MemoryManager } from '@/lib/memory';
 import { rateLimit } from '@/lib/rate-limit';
+import { Serialized } from 'langchain/load/serializable';
 import prismadb from '@/lib/prismadb';
 
 export async function POST(
@@ -14,11 +17,20 @@ export async function POST(
   try {
     const { prompt, userWalletAddress } = await request.json();
 
-    const identifier = request.url + '-' + userWalletAddress;
+    const identifier = request.url + '-' + (userWalletAddress || 'anonymous');
     const { success } = await rateLimit(identifier);
 
     if (!success) {
-      return new NextResponse('Rate limit exceeded', { status: 429 });
+      console.log('INFO: rate limit exceeded');
+      return new NextResponse(
+        JSON.stringify({ Message: "Hi, the companions can't talk this fast." }),
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
     }
 
     const character = await prismadb.character.update({
@@ -44,14 +56,14 @@ export async function POST(
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const name = character.id;
-    const character_file_name = name + '.txt';
-
     const characterKey: CharacterKey = {
-      characterName: name,
+      characterName: character.name,
       userWalletAddress: userWalletAddress,
-      modelName: 'llama2-13b',
+      modelName: 'chatgpt',
     };
+
+    const name = character.name.toLowerCase();
+    const character_file_name = name + '.txt';
 
     const memoryManager = await MemoryManager.getInstance();
 
@@ -63,9 +75,7 @@ export async function POST(
 
     await memoryManager.writeToHistory('User: ' + prompt + '\n', characterKey);
 
-    const recentChatHistory = await memoryManager.readLatestHistory(
-      characterKey
-    );
+    let recentChatHistory = await memoryManager.readLatestHistory(characterKey);
 
     const similarDocs = await memoryManager.vectorSearch(
       recentChatHistory,
@@ -78,51 +88,65 @@ export async function POST(
       relevantHistory = similarDocs.map((doc) => doc.pageContent).join('\n');
     }
 
-    const { handlers } = LangChainStream();
 
-    const model = new Replicate({
-      model:
-        'a16z-infra/llama-2-13b-chat:2a7f981751ec7fdf87b5b91ad4db53683a98082e9ff7bfd12c8cd5ea85980a52',
-      input: {
-        max_length: 2048,
-      },
-      apiKey: process.env.REPLICATE_API_TOKEN,
-      callbackManager: CallbackManager.fromHandlers(handlers),
+    class CustomHandler extends BaseCallbackHandler {
+      name = 'custom_handler';
+
+      handleLLMStart(llm: Serialized, _prompts: string[]) {
+        console.log('Started generating the response...');
+      }
+    }
+
+    const handler1 = new CustomHandler();
+
+    const model = new OpenAI({
+      streaming: true,
+      modelName: 'gpt-3.5-turbo-16k',
+      openAIApiKey: process.env.OPENAI_API_KEY,
     });
 
     model.verbose = true;
 
-    const resp = String(
-      await model
-        .call(
-          `
-          ONLY generate NO more than three sentences as ${name}. DO NOT generate more than three sentences. 
-          DO NOT use '${name}: as a prefix'.
+    const chainPrompt = PromptTemplate.fromTemplate(`
+                You are ${name} ${character.description} and are currently talking to ${userWalletAddress}.
+                You reply with answers that range from one sentence to one paragraph and with some details.
+                Below are relevant details about ${name}'s past
+                ${character.instructions}
+                Below is a relevant conversation history
+                ${recentChatHistory}
+                DO NOT GENERATE OUTPUT like ${character.name} : response, chat as if you are ${character.name}
+                OUTPUT SHOULD BE LIKE : response.
+                `);
 
-            ${character.instructions}
+    const chain = new LLMChain({
+      llm: model,
+      prompt: chainPrompt,
+      callbacks: [handler1],
+    });
 
-            Below are the relavent details about ${name}'s past conversations you are in.
-            ${relevantHistory}
+    let result = await chain
+      .call({
+        relevantHistory,
+        recentChatHistory,
+      })
+      .catch((error) => {
+        console.log(error);
+      });
 
-            ${recentChatHistory}\n${name}
-                `
-        )
-        .catch(console.error)
-    );
+    if(result!.text.includes(":")){
+      result!.text = result!.text.split(": ")[1]
+    }
 
-    const cleaned = resp.replaceAll(',', '');
-    const chunks = cleaned.split('\n');
-    const response = chunks[0];
+    if (result !== undefined && result.text.length > 1) {
+      var Readable = require('stream').Readable;
+      let s = new Readable();
+      s.push(result!.text);
+      s.push(null);
 
-    await memoryManager.writeToHistory('' + response.trim(), characterKey);
-    var Readable = require('stream').Readable;
-
-    let s = new Readable();
-    s.push(response);
-    s.push(null);
-
-    if (response !== undefined && response.length > 1) {
-      await memoryManager.writeToHistory('' + response.trim(), characterKey);
+      const chatHistoryRecord = await memoryManager.writeToHistory(
+        result!.text + '\n',
+        characterKey
+      );
 
       await prismadb.character.update({
         where: {
@@ -131,16 +155,16 @@ export async function POST(
         data: {
           messages: {
             create: {
-              content: response.trim(),
+              content: result!.text,
               role: 'system',
               userWalletAddress: userWalletAddress,
             },
           },
         },
       });
+      return new StreamingTextResponse(s);
     }
-
-    return new StreamingTextResponse(s);
+    return new NextResponse("There was error generating response",{status:500})
   } catch (error) {
     console.log('[CHAT_POST]', error);
     return new NextResponse('Internal Server Error', { status: 500 });

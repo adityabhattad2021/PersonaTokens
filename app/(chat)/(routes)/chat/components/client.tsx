@@ -33,14 +33,19 @@ export default function ChatClient({ character }: ChatClientProps) {
         setInput
     } = useCompletion({
         api: `/api/chat/${character.id}`,
-        onFinish(prompt, completion) {
+        onFinish(prompt,completion) {
             const systemMessage: ChatMessageProps = {
                 role: "system",
                 content: completion,
             }
+            console.log(completion);
+            
             setMessages((current) => [...current, systemMessage]);
             setInput("")
-
+            router.refresh();
+        },
+        onError(error){
+            console.log(error);
             router.refresh();
         },
         body:{
@@ -58,6 +63,8 @@ export default function ChatClient({ character }: ChatClientProps) {
         handleSubmit(e);
     }
 
+   
+    
     return (
         <div className="flex flex-col h-full p-4 space-y-2">
             <ChatHeader
